@@ -1,0 +1,8 @@
+.env
+venv/
+uploads/
+report.json
+__pycache__/
+reports/
+*.apk
+*.pdf
