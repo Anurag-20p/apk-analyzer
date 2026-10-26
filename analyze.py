@@ -71,25 +71,27 @@ def is_public_ip(host):
         return False
 
 
+URL_BYTES_RE = re.compile(rb"https?://[^\s\"'<>\\\x00-\x1f\x7f-\xff]+")
+EVASION_BYTES = {k.encode(): v for k, v in EVASION.items()}
+
+
 def scan_strings(apk):
     urls, ips, evasion_hits = set(), set(), {}
     for dex_bytes in apk.get_all_dex():
-        dex = DEX(dex_bytes)
-        for s in dex.get_strings():
-            s = str(s)
-            for u in URL_RE.findall(s):
-                if any(i in u for i in IGNORE):
-                    continue
-                urls.add(u)
-                try:
-                    host = urlparse(u).hostname
-                except ValueError:
-                    host = None
-                if host and is_public_ip(host):
-                    ips.add(host)
-            for key, val in EVASION.items():
-                if key in s:
-                    evasion_hits[key] = val
+        for m in URL_BYTES_RE.findall(dex_bytes):
+            u = m.decode("utf-8", "ignore")
+            if any(i in u for i in IGNORE):
+                continue
+            urls.add(u)
+            try:
+                host = urlparse(u).hostname
+            except ValueError:
+                host = None
+            if host and is_public_ip(host):
+                ips.add(host)
+        for key, val in EVASION_BYTES.items():
+            if key in dex_bytes:
+                evasion_hits[key.decode()] = val
     return urls, ips, evasion_hits
 
 
